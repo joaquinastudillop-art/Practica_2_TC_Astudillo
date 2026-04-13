@@ -1,0 +1,91 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import control as ct
+
+# =========================================================
+# 1. Definición del Sistema Base
+# =========================================================
+num = [3]
+den = [1, 2, 3]
+Gs = ct.tf(num, den)
+retardo = 2.0  # Retardo en segundos
+
+# =========================================================
+# 5.1 Señal Arbitraria Básica
+# =========================================================
+t_g = np.arange(0, 30.1, 0.1)
+signal = np.zeros_like(t_g)
+signal[(t_g >= 10) & (t_g < 20)] = 5
+signal[t_g >= 20] = 10
+
+# Simulación (Equivalente a lsim)
+t_g, y_arb = ct.forced_response(Gs, T=t_g, U=signal)
+
+plt.figure()
+plt.plot(t_g, signal, 'b--', linewidth=2, label='Señal arbitraria')
+plt.plot(t_g, y_arb, 'r-', linewidth=1.8, label='Respuesta del sistema')
+plt.title('Respuesta del Sistema a Señal Excitación Arbitraria')
+plt.xlabel('Tiempo [s]')
+plt.ylabel('Amplitud')
+plt.grid(True)
+plt.legend()
+plt.show()
+
+# =========================================================
+# 5.3 Señal Arbitraria por Tramos (Rampa incluida)
+# =========================================================
+t_arb = np.arange(0, 40.1, 0.1)
+u_arb = np.zeros_like(t_arb)
+
+u_arb[(t_arb >= 10) & (t_arb < 20)] = 5
+idx = (t_arb >= 20) & (t_arb < 30)
+u_arb[idx] = np.linspace(15, 25, np.sum(idx))
+u_arb[t_arb >= 30] = 25
+
+t_arb, y_arb2 = ct.forced_response(Gs, T=t_arb, U=u_arb)
+
+plt.figure()
+plt.plot(t_arb, u_arb, '--', linewidth=2, label='Señal por tramos')
+plt.plot(t_arb, y_arb2, linewidth=2, label='Respuesta')
+plt.title('Respuesta a una Señal Arbitraria por Tramos')
+plt.xlabel('Tiempo [s]')
+plt.ylabel('Amplitud')
+plt.grid(True)
+plt.legend()
+plt.show()
+
+# =========================================================
+# 6. Actividad Reto: Señal PRBS Combinada con Retardo
+# =========================================================
+t_prbs = np.arange(0, 40.1, 0.1)
+u_prbs = np.zeros_like(t_prbs)
+
+# Construcción de tramos lógicos
+idx1 = (t_prbs >= 0) & (t_prbs < 10)
+u_prbs[idx1] = np.sin(2 * np.pi * 0.25 * t_prbs[idx1])
+u_prbs[(t_prbs >= 10) & (t_prbs < 15)] = 3
+idx3 = (t_prbs >= 15) & (t_prbs < 20)
+u_prbs[idx3] = np.linspace(3, 5, np.sum(idx3))
+u_prbs[(t_prbs >= 20) & (t_prbs < 25)] = 5
+idx5 = (t_prbs >= 25) & (t_prbs < 30)
+u_prbs[idx5] = np.linspace(5, -3, np.sum(idx5))
+u_prbs[t_prbs >= 30] = -3
+
+# Simulación del sistema sin retardo
+_, y_base = ct.forced_response(Gs, T=t_prbs, U=u_prbs)
+
+# Aplicación exacta del retardo puro (Tiempo muerto)
+# Desplazamos el arreglo la cantidad de índices correspondientes a 2 segundos
+y_prbs = np.zeros_like(y_base)
+pasos_retardo = int(retardo / 0.1) # 20 pasos
+y_prbs[pasos_retardo:] = y_base[:-pasos_retardo]
+
+plt.figure()
+plt.plot(t_prbs, u_prbs, linewidth=1.5, label='Entrada PRBS')
+plt.plot(t_prbs, y_prbs, linewidth=2, label='Salida del Sistema (Con retardo)')
+plt.title('Señal PRBS Combinada y Respuesta del Sistema')
+plt.xlabel('Tiempo [s]')
+plt.ylabel('Amplitud')
+plt.grid(True)
+plt.legend(loc='best')
+plt.show()
